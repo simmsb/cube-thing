@@ -1,10 +1,8 @@
-#![feature(const_fn)]
-
 use bitvec::{
     bits::{Bits as _, BitsMut as _},
     cursor,
 };
-use itertools::{iproduct, Itertools};
+use itertools::Itertools;
 use rppal::gpio::{self, Gpio, Level, OutputPin};
 use std::time::{Duration, Instant};
 
@@ -91,6 +89,16 @@ where
             last_frame_at: Instant::now(),
         }
     }
+
+    fn next_frame(&mut self, now: Instant) -> Option<&mut std::iter::Cycle<II::IntoIter>> {
+        let (current_it, duration) = self.iter.next()?;
+        let current_it = current_it.into_iter().cycle();
+
+        self.current = Some((current_it, duration));
+        self.last_frame_at = now;
+
+        Some(&mut self.current.as_mut().unwrap().0)
+    }
 }
 
 impl<'a, I, II> Iterator for FrameIter<I, II>
@@ -106,28 +114,12 @@ where
             let now = Instant::now();
 
             if now.duration_since(self.last_frame_at) > duration {
-                let (current_it, duration) = self.iter.next()?;
-                let mut current_it = current_it.into_iter().cycle();
-
-                let next = current_it.next();
-
-                self.current = Some((current_it, duration));
-                self.last_frame_at = now;
-
-                return next;
+                self.next_frame(now)?.next()
             } else {
-                return current_it.next();
+                current_it.next()
             }
         } else {
-            let (current_it, duration) = self.iter.next()?;
-            let mut current_it = current_it.into_iter().cycle();
-
-            let next = current_it.next();
-
-            self.current = Some((current_it, duration));
-            self.last_frame_at = Instant::now();
-
-            return next;
+            self.next_frame(Instant::now())?.next()
         }
     }
 }
@@ -201,29 +193,14 @@ fn process_frame(frame: &[[[u8; 8]; 8]; 8]) -> [Frame; 32] {
 fn main() {
     let mut pins = Pins::new().unwrap();
 
-    // let mut raw_frames = [
-    //     [
-    //         [[0; 8]; 8],
-    //         [[32; 8]; 8],
-    //         [[64; 8]; 8],
-    //         [[96; 8]; 8],
-    //         [[128; 8]; 8],
-    //         [[160; 8]; 8],
-    //         [[192; 8]; 8],
-    //         [[224; 8]; 8],
-    //     ]; 16];
+    let mut raw_frames = [[[[0; 8]; 8]; 8]; 45];
 
-    // for i in 0..8 {
-    //     raw_frames[i].rotate_right(i);
-    //     raw_frames[15 - i].rotate_left(i);
-    // }
+    for frame in 0..45 {
+        for layer in 0..8 {
+            let idx = ((((frame + layer) as f64 * 8.0).to_radians().sin() + 1.0) * 127.0) as u8;
 
-    let mut raw_frames = [[[[0; 8]; 8]; 8]; 90];
-
-    for i in 0..90 {
-        let idx = (((i as f64 * 4.0).to_radians().sin() + 1.0) * 127.0) as u8;
-
-        raw_frames[i] = [[[idx; 8]; 8]; 8];
+            raw_frames[frame][layer] = [[idx; 8]; 8];
+        }
     }
 
     let frame_datas: Vec<_> = raw_frames
