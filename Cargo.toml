@@ -2,11 +2,20 @@
 name = "cube-thing"
 version = "0.1.0"
 authors = ["Ben Simms <ben@bensimms.moe>"]
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rppal = "0.11.3"
-bitvec = "0.14.0"
-itertools = "0.8.0"
+bevy = { version = "0.6.1", features = ["wayland"], optional = true }
+bevy_config_cam = { version = "0.2.0", optional = true }
+bitvec = "1.0.0"
+itertools = "0.10.3"
+rand = "0.8.5"
+rppal = "0.13.1"
+sdfu = { features = ["ultraviolet"], git = "https://github.com/termhn/sdfu.git" }
+ultraviolet = "0.8"
+
+[features]
+default = ["visual"]
+visual = ["bevy", "bevy_config_cam"]
