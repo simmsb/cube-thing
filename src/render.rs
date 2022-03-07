@@ -14,6 +14,10 @@ impl Frame {
         Self([[[0u8; 8]; 8]; 8])
     }
 
+    pub fn get(&self, x: usize, y: usize, z: usize) -> u8 {
+        self.0[y][x][z]
+    }
+
     pub fn set(&mut self, x: usize, y: usize, z: usize, val: u8) {
         self.0[y][x][z] = val;
     }
