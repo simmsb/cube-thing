@@ -12,6 +12,7 @@ bevy_flycam = { version = "0.6.0", optional = true }
 bitvec = "1.0.0"
 itertools = "0.10.3"
 rand = "0.8.5"
+rapier3d = { version = "0.11.1", features = ["simd-stable"] }
 rppal = "0.13.1"
 sdfu = { features = ["ultraviolet"], git = "https://github.com/termhn/sdfu.git" }
 ultraviolet = "0.8"
