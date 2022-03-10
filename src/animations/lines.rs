@@ -1,14 +1,14 @@
 use crate::render::{Animation, Frame};
 use crate::sdf::{render_sdf, MultiUnion};
+use nalgebra::{vector, Rotation3, Vector3};
 use rand::Rng;
-use ultraviolet as uv;
 
 #[derive(Default)]
 pub struct SpinningLines {
     /// (rotation, offset)
-    lines: Vec<(uv::Rotor3, uv::Vec3)>,
+    lines: Vec<(Rotation3<f32>, Vector3<f32>)>,
 
-    line_cache: Vec<sdfu::Line<f32, uv::Vec3>>,
+    line_cache: Vec<sdfu::Line<f32, Vector3<f32>>>,
 }
 
 impl Animation for SpinningLines {
@@ -19,30 +19,30 @@ impl Animation for SpinningLines {
 
         let to_add = if self.lines.len() < MIN_LINES {
             MIN_LINES - self.lines.len()
-        } else if self.lines.len() < 10 && rng.gen_range(0..500) < 1 {
+        } else if self.lines.len() < 10 && rng.gen_range(0..500u16) < 1 {
             1
         } else {
             0
         };
 
-        let to_remove = if self.lines.len() > 3 && rng.gen_range(0..500) < 1 {
+        let to_remove = if self.lines.len() > 3 && rng.gen_range(0..500u16) < 1 {
             1
         } else {
             0
         };
 
         for _ in 0..to_add {
-            let rotation = uv::Rotor3::from_euler_angles(
+            let rotation = Rotation3::from_euler_angles(
                 rng.gen_range(0.0..std::f32::consts::TAU),
                 rng.gen_range(0.0..std::f32::consts::TAU),
                 rng.gen_range(0.0..std::f32::consts::TAU),
             );
 
-            let translation = uv::Vec3::new(
+            let translation = vector![
                 rng.gen_range(-2.0..2.0),
                 rng.gen_range(-2.0..2.0),
-                rng.gen_range(-2.0..2.0),
-            );
+                rng.gen_range(-2.0..2.0)
+            ];
 
             self.lines.push((rotation, translation));
         }
@@ -52,16 +52,16 @@ impl Animation for SpinningLines {
         }
 
         for line in &mut self.lines {
-            line.0 = uv::Rotor3::from_rotation_xz(0.01) * line.0;
+            line.0 = Rotation3::from_axis_angle(&Vector3::y_axis(), 0.01) * line.0;
         }
 
         self.line_cache.clear();
         self.line_cache
             .extend(self.lines.iter().cloned().map(|(rot, trans)| {
-                let base_trans = uv::Vec3::new(4.0, 4.0, 4.0);
+                let base_trans = vector![4.0, 4.0, 4.0];
 
-                let start = (uv::Vec3::new(0.0, 0.0, 100.0) + trans).rotated_by(rot) + base_trans;
-                let end = (uv::Vec3::new(0.0, 0.0, -100.0) + trans).rotated_by(rot) + base_trans;
+                let start = rot * (vector![0.0, 0.0, 100.0] + trans) + base_trans;
+                let end = rot * (vector![0.0, 0.0, -100.0] + trans) + base_trans;
 
                 sdfu::Line::new(start, end, 0.0)
             }));

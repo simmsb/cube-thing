@@ -1,5 +1,6 @@
 use crate::render::{Animation, Frame};
-use crate::sdf::{render_sdf, MultiUnion};
+use crate::sdf::render_sdf;
+use rand::Rng;
 use rapier3d::prelude::*;
 use sdfu::SDF;
 
@@ -11,9 +12,10 @@ pub struct Bounce {
     np: NarrowPhase,
     rbs: RigidBodySet,
     cs: ColliderSet,
-    js: JointSet,
+    ijs: ImpulseJointSet,
+    mbjs: MultibodyJointSet,
     ccd: CCDSolver,
-    bh: RigidBodyHandle, // ball_handle:
+    bh: RigidBodyHandle,
 }
 
 impl Default for Bounce {
@@ -48,9 +50,17 @@ impl Default for Bounce {
             .build();
         collider_set.insert(collider);
 
+        let mut rng = rand::thread_rng();
+        let initial_vel = vector![0.0, 7.0, 0.0];
+        let rotation = rapier3d::na::Rotation3::from_euler_angles(
+            rng.gen_range(0.0..std::f32::consts::TAU),
+            rng.gen_range(0.0..std::f32::consts::TAU),
+            rng.gen_range(0.0..std::f32::consts::TAU),
+        );
+
         let rigid_body = RigidBodyBuilder::new_dynamic()
             .translation(vector![4.0, 4.0, 4.0])
-            .linvel(vector![4.0, 5.0, 2.0])
+            .linvel(rotation * initial_vel)
             .build();
 
         let collider = ColliderBuilder::ball(0.5)
@@ -67,7 +77,8 @@ impl Default for Bounce {
         let island_manager = IslandManager::new();
         let broad_phase = BroadPhase::new();
         let narrow_phase = NarrowPhase::new();
-        let joint_set = JointSet::new();
+        let impulse_joint_set = ImpulseJointSet::new();
+        let multibody_joint_set = MultibodyJointSet::new();
         let ccd_solver = CCDSolver::new();
 
         Self {
@@ -78,7 +89,8 @@ impl Default for Bounce {
             np: narrow_phase,
             rbs: rigid_body_set,
             cs: collider_set,
-            js: joint_set,
+            ijs: impulse_joint_set,
+            mbjs: multibody_joint_set,
             ccd: ccd_solver,
             bh: ball_body_handle,
         }
@@ -95,7 +107,8 @@ impl Animation for Bounce {
             &mut self.np,
             &mut self.rbs,
             &mut self.cs,
-            &mut self.js,
+            &mut self.ijs,
+            &mut self.mbjs,
             &mut self.ccd,
             &(),
             &(),
@@ -103,8 +116,7 @@ impl Animation for Bounce {
 
         let ball_pos = *self.rbs[self.bh].translation();
 
-        let sdf = sdfu::Sphere::new(0.3)
-            .translate(ultraviolet::Vec3::new(ball_pos.x, ball_pos.y, ball_pos.z));
+        let sdf = sdfu::Sphere::new(0.3).translate(ball_pos);
 
         render_sdf(sdf, frame);
     }

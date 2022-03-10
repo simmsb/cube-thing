@@ -14,7 +14,7 @@ impl Animation for SineThing {
             frame.layer_mut(layer).fill([brightness; 8]);
         }
 
-        self.step += 1.0;
+        self.step += 0.1;
         self.step %= 360.0 / 8.0;
     }
 
