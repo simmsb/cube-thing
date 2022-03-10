@@ -50,9 +50,15 @@ impl Default for Bounce {
 
         let rigid_body = RigidBodyBuilder::new_dynamic()
             .translation(vector![4.0, 4.0, 4.0])
-            .linvel(vector![4.0, 5.0, 4.0])
+            .linvel(vector![4.0, 5.0, 2.0])
             .build();
-        let collider = ColliderBuilder::ball(0.5).restitution(0.7).build();
+
+        let collider = ColliderBuilder::ball(0.5)
+            .restitution(1.0)
+            .restitution_combine_rule(CoefficientCombineRule::Max)
+            .friction(0.0)
+            .friction_combine_rule(CoefficientCombineRule::Min)
+            .build();
         let ball_body_handle = rigid_body_set.insert(rigid_body);
         collider_set.insert_with_parent(collider, ball_body_handle, &mut rigid_body_set);
 
@@ -97,7 +103,7 @@ impl Animation for Bounce {
 
         let ball_pos = *self.rbs[self.bh].translation();
 
-        let sdf = sdfu::Sphere::new(0.5)
+        let sdf = sdfu::Sphere::new(0.3)
             .translate(ultraviolet::Vec3::new(ball_pos.x, ball_pos.y, ball_pos.z));
 
         render_sdf(sdf, frame);
