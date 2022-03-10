@@ -116,6 +116,13 @@ impl Animation for Bounce {
 
         let ball_pos = *self.rbs[self.bh].translation();
 
+        let linvel = *self.rbs[self.bh].linvel();
+
+        if linvel.magnitude() > 7.0 {
+            let new_linvel = linvel.normalize().scale(7.0);
+            self.rbs[self.bh].set_linvel(new_linvel, false);
+        }
+
         let sdf = sdfu::Sphere::new(0.3).translate(ball_pos);
 
         render_sdf(sdf, frame);
