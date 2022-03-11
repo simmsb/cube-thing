@@ -9,7 +9,8 @@ pub mod sine_thing;
 pub fn current_config() -> impl Animation {
     bounce::Bounce::default()
         .with_fps(60.0)
-        .with_duration(Duration::from_secs(60 * 30))
+        .with_duration(Duration::from_secs(60))
+        .repeat(30)
         .chain(
             lines::SpinningLines::default()
                 .with_fps(60.0)

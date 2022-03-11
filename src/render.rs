@@ -205,6 +205,17 @@ pub trait Animation {
             current: false,
         }
     }
+
+    fn repeat(self, times: usize) -> RepeatedAnimation<Self>
+    where
+        Self: Sized,
+    {
+        RepeatedAnimation {
+            inner: self,
+            loops: times,
+            count: 0,
+        }
+    }
 }
 
 pub struct FixedFPSAnimation<T> {
@@ -285,6 +296,32 @@ impl<T: Animation, U: Animation> Animation for ChainedAnimation<T, U> {
     fn reset(&mut self) {
         self.a.reset();
         self.current = false;
+    }
+}
+
+pub struct RepeatedAnimation<T> {
+    inner: T,
+    loops: usize,
+    count: usize,
+}
+
+impl<T: Animation> Animation for RepeatedAnimation<T> {
+    fn next_frame(&mut self, frame: &mut Frame) {
+        if self.inner.ended() && self.count < self.loops {
+            self.inner.reset();
+            self.count += 1;
+        }
+
+        self.inner.next_frame(frame);
+    }
+
+    fn ended(&self) -> bool {
+        self.inner.ended() && self.count < self.loops
+    }
+
+    fn reset(&mut self) {
+        self.inner.reset();
+        self.count = 0;
     }
 }
 
