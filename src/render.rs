@@ -316,7 +316,7 @@ impl<T: Animation> Animation for RepeatedAnimation<T> {
     }
 
     fn ended(&self) -> bool {
-        self.inner.ended() && self.count < self.loops
+        self.inner.ended() && self.count >= self.loops
     }
 
     fn reset(&mut self) {
