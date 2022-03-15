@@ -5,6 +5,12 @@ pub struct SineThing {
     step: f32,
 }
 
+impl std::fmt::Debug for SineThing {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SineThing").finish()
+    }
+}
+
 impl Animation for SineThing {
     fn next_frame(&mut self, frame: &mut Frame) {
         for layer in 0..Frame::LAYERS {

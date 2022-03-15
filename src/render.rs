@@ -167,10 +167,6 @@ impl PWMTicker {
 pub trait Animation {
     fn next_frame(&mut self, frame: &mut Frame);
 
-    fn ended(&self) -> bool {
-        false
-    }
-
     fn reset(&mut self);
 
     fn with_fps(self, fps: f32) -> FixedFPSAnimation<Self>
@@ -218,6 +214,37 @@ pub trait Animation {
     }
 }
 
+pub trait TerminatingAnimation: Animation {
+    fn ended(&self) -> bool;
+}
+
+pub trait MaybeTerminatingAnimation: Animation {
+    fn maybe_ended(&self) -> bool;
+}
+
+impl<T: Animation> MaybeTerminatingAnimation for T {
+    default fn maybe_ended(&self) -> bool {
+        false
+    }
+}
+
+macro_rules! impl_maybe_term {
+    ( $( $name:ident $(< $( $lt:tt $( : $clt:tt $(+ $dlt:tt )* )? ),+ >)? ),+ ) => {
+        $(
+            impl $(< $( $lt $( : $clt $(+ $dlt )* )? ),+ >)?
+                MaybeTerminatingAnimation
+            for $name
+                $(< $( $lt ),+ >)?
+            {
+                fn maybe_ended(&self) -> bool {
+                    self.ended()
+                }
+            }
+        )+
+    }
+}
+
+#[derive(Debug)]
 pub struct FixedFPSAnimation<T> {
     inner: T,
     interval: Duration,
@@ -233,15 +260,20 @@ impl<T: Animation> Animation for FixedFPSAnimation<T> {
         }
     }
 
-    fn ended(&self) -> bool {
-        self.inner.ended()
-    }
-
     fn reset(&mut self) {
         self.inner.reset();
     }
 }
 
+impl<T: TerminatingAnimation> TerminatingAnimation for FixedFPSAnimation<T> {
+    fn ended(&self) -> bool {
+        self.inner.ended()
+    }
+}
+
+impl_maybe_term!(FixedFPSAnimation<T: TerminatingAnimation>);
+
+#[derive(Debug)]
 pub struct TimeLimitedAnimation<T> {
     inner: T,
     duration: Duration,
@@ -253,30 +285,39 @@ impl<T: Animation> Animation for TimeLimitedAnimation<T> {
         self.inner.next_frame(frame);
     }
 
-    fn ended(&self) -> bool {
-        if Instant::now().duration_since(self.started) > self.duration {
-            return true;
-        }
-
-        self.inner.ended()
-    }
-
     fn reset(&mut self) {
         self.inner.reset();
         self.started = Instant::now();
     }
 }
 
+impl<T: MaybeTerminatingAnimation> TerminatingAnimation for TimeLimitedAnimation<T> {
+    fn ended(&self) -> bool {
+        if Instant::now().duration_since(self.started) > self.duration {
+            dbg!("resetting time animation", std::any::type_name::<T>());
+            return true;
+        }
+
+        self.inner.maybe_ended()
+    }
+}
+
+#[derive(Debug)]
 pub struct ChainedAnimation<T, U> {
     a: T,
     b: U,
     current: bool,
 }
 
-impl<T: Animation, U: Animation> Animation for ChainedAnimation<T, U> {
+impl<T: TerminatingAnimation, U: Animation> Animation for ChainedAnimation<T, U> {
     fn next_frame(&mut self, frame: &mut Frame) {
         if !self.current {
             if self.a.ended() {
+                dbg!(
+                    "switching chain animation",
+                    std::any::type_name::<T>(),
+                    std::any::type_name::<U>()
+                );
                 self.current = !self.current;
                 self.b.reset();
             } else {
@@ -284,13 +325,9 @@ impl<T: Animation, U: Animation> Animation for ChainedAnimation<T, U> {
             }
         }
 
-        if self.current && !self.b.ended() {
+        if self.current {
             self.b.next_frame(frame)
         }
-    }
-
-    fn ended(&self) -> bool {
-        self.current && self.b.ended()
     }
 
     fn reset(&mut self) {
@@ -299,24 +336,37 @@ impl<T: Animation, U: Animation> Animation for ChainedAnimation<T, U> {
     }
 }
 
+// chained animations only terminate if the final animation terminates
+impl<T: TerminatingAnimation, U: TerminatingAnimation> TerminatingAnimation
+    for ChainedAnimation<T, U>
+{
+    fn ended(&self) -> bool {
+        self.current && self.b.ended()
+    }
+}
+
+impl_maybe_term!(ChainedAnimation<T: TerminatingAnimation, U: TerminatingAnimation>);
+
+#[derive(Debug)]
 pub struct RepeatedAnimation<T> {
     inner: T,
     loops: usize,
     count: usize,
 }
 
-impl<T: Animation> Animation for RepeatedAnimation<T> {
+impl<T: TerminatingAnimation> Animation for RepeatedAnimation<T> {
     fn next_frame(&mut self, frame: &mut Frame) {
         if self.inner.ended() && self.count < self.loops {
             self.inner.reset();
             self.count += 1;
+            dbg!(
+                "repeating repeat animation",
+                std::any::type_name::<T>(),
+                self.count
+            );
         }
 
         self.inner.next_frame(frame);
-    }
-
-    fn ended(&self) -> bool {
-        self.inner.ended() && self.count >= self.loops
     }
 
     fn reset(&mut self) {
@@ -325,25 +375,33 @@ impl<T: Animation> Animation for RepeatedAnimation<T> {
     }
 }
 
+impl<T: TerminatingAnimation> TerminatingAnimation for RepeatedAnimation<T> {
+    fn ended(&self) -> bool {
+        self.count >= self.loops && self.inner.ended()
+    }
+}
+
+impl_maybe_term!(RepeatedAnimation<T: TerminatingAnimation>);
+
 pub struct Driver {
-    animation: Box<dyn Animation + Send + Sync>,
-    #[cfg(not(feature = "visual"))]
+    animation: Box<dyn MaybeTerminatingAnimation + Send + Sync>,
+    #[cfg(feature = "rpi_out")]
     pins: Pins,
     ticker: PWMTicker,
     frame: Frame,
 }
 
 impl Driver {
-    pub fn new<T: Animation + Send + Sync + 'static>(animation: T) -> Self {
-        #[cfg(not(feature = "visual"))]
+    pub fn new<T: MaybeTerminatingAnimation + Send + Sync + 'static>(animation: T) -> Self {
+        #[cfg(feature = "rpi_out")]
         let pins = Pins::new().unwrap();
         let ticker = PWMTicker::new();
-        let animation = Box::new(animation) as Box<dyn Animation + Send + Sync>;
+        let animation = Box::new(animation) as Box<dyn MaybeTerminatingAnimation + Send + Sync>;
         let frame = Frame::new();
 
         Self {
             animation,
-            #[cfg(not(feature = "visual"))]
+            #[cfg(feature = "rpi_out")]
             pins,
             ticker,
             frame,
@@ -355,13 +413,13 @@ impl Driver {
     }
 
     pub fn step(&mut self) {
-        if self.animation.ended() {
+        if self.animation.maybe_ended() {
             self.animation.reset();
         }
 
         self.animation.next_frame(&mut self.frame);
 
-        #[cfg(not(feature = "visual"))]
+        #[cfg(feature = "rpi_out")]
         self.pins.display_frame(&self.frame, &self.ticker);
         self.ticker.next_frame();
     }

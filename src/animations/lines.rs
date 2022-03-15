@@ -11,6 +11,12 @@ pub struct SpinningLines {
     line_cache: Vec<sdfu::Line<f32, Vector3<f32>>>,
 }
 
+impl std::fmt::Debug for SpinningLines {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SpinningLines").finish()
+    }
+}
+
 impl Animation for SpinningLines {
     fn next_frame(&mut self, frame: &mut Frame) {
         let mut rng = rand::thread_rng();

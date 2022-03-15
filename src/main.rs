@@ -1,3 +1,5 @@
+#![feature(specialization)]
+
 mod animations;
 mod render;
 mod sdf;

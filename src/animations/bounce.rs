@@ -18,6 +18,12 @@ pub struct Bounce {
     bh: RigidBodyHandle,
 }
 
+impl std::fmt::Debug for Bounce {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Bounce").finish()
+    }
+}
+
 impl Default for Bounce {
     fn default() -> Self {
         let mut rigid_body_set = RigidBodySet::new();
@@ -61,6 +67,7 @@ impl Default for Bounce {
         let rigid_body = RigidBodyBuilder::new_dynamic()
             .translation(vector![4.0, 4.0, 4.0])
             .linvel(rotation * initial_vel)
+            // .linvel(vector![4.0, 2.0, 3.0])
             .build();
 
         let collider = ColliderBuilder::ball(0.5)
@@ -100,7 +107,7 @@ impl Default for Bounce {
 impl Animation for Bounce {
     fn next_frame(&mut self, frame: &mut Frame) {
         self.pp.step(
-            &vector![0.0, 0.0, 0.0],
+            &vector![0.0, -9.81, 0.0],
             &self.ip,
             &mut self.im,
             &mut self.bp,
@@ -118,8 +125,8 @@ impl Animation for Bounce {
 
         let linvel = *self.rbs[self.bh].linvel();
 
-        if linvel.magnitude() > 7.0 {
-            let new_linvel = linvel.normalize().scale(7.0);
+        if linvel.magnitude() > 14.0 {
+            let new_linvel = linvel.normalize().scale(14.0);
             self.rbs[self.bh].set_linvel(new_linvel, false);
         }
 

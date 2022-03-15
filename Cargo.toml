@@ -20,3 +20,4 @@ sdfu = { features = ["nalgebra"], git = "https://github.com/simmsb/sdfu.git" }
 [features]
 default = ["visual"]
 visual = ["bevy", "bevy_flycam"]
+rpi_out = []
