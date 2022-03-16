@@ -1,5 +1,8 @@
-use crate::render::{Animation, Frame};
-use crate::sdf::{render_sdf, MultiUnion};
+use crate::{
+    animation::Animation,
+    frame::Frame,
+    sdf::{render_sdf, MultiUnion},
+};
 use nalgebra::{vector, Rotation3, Vector3};
 use rand::Rng;
 

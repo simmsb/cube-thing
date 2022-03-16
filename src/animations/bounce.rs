@@ -1,5 +1,4 @@
-use crate::render::{Animation, Frame};
-use crate::sdf::render_sdf;
+use crate::{animation::Animation, frame::Frame, sdf::render_sdf};
 use rand::Rng;
 use rapier3d::prelude::*;
 use sdfu::SDF;

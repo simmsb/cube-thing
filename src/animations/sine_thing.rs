@@ -1,4 +1,4 @@
-use crate::render::{Animation, Frame};
+use crate::{animation::Animation, frame::Frame};
 
 #[derive(Default)]
 pub struct SineThing {
@@ -13,15 +13,13 @@ impl std::fmt::Debug for SineThing {
 
 impl Animation for SineThing {
     fn next_frame(&mut self, frame: &mut Frame) {
-        for layer in 0..Frame::LAYERS {
-            let brightness =
-                ((((self.step + layer as f32) * 8.0).to_radians().sin() + 1.0) * 127.0) as u8;
-
-            frame.layer_mut(layer).fill([brightness; 8]);
+        for (x, y, z, pix) in frame.pixels_mut() {
+            let dist = ((4.0 - x as f32).powi(2) + (4.0 - y as f32).powi(2) + (4.0 - z as f32).powi(2)).sqrt();
+            *pix = ((((self.step + dist) * 30.0).to_radians().sin() + 1.0) * 127.0) as u8;
         }
 
         self.step += 0.1;
-        self.step %= 360.0 / 8.0;
+        self.step %= 360.0 / 30.0;
     }
 
     fn reset(&mut self) {

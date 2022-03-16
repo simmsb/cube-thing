@@ -1,8 +1,12 @@
+#![allow(incomplete_features)]
 #![feature(specialization)]
 
+mod animation;
 mod animations;
+mod frame;
 mod render;
 mod sdf;
+mod backends;
 
 #[cfg(feature = "visual")]
 mod visual;
@@ -15,10 +19,22 @@ fn main() {
 #[cfg(not(feature = "visual"))]
 fn main() {
     use crate::animations::current_config;
-
     let animation = current_config();
 
-    let mut driver = crate::render::Driver::new(animation);
+    let backend = {
+        #[cfg(feature = "rpi_out")]
+        {
+            use backends::rpi::RpiBackend;
+            RpiBackend::new().unwrap()
+        }
+        #[cfg(not(feature = "rpi_out"))]
+        {
+            use backends::null::NullBackend;
+            NullBackend
+        }
+    };
+
+    let mut driver = crate::render::Driver::new(animation, backend);
 
     loop {
         driver.step();

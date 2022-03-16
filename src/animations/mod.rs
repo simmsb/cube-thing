@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::render::{Animation, MaybeTerminatingAnimation};
+use crate::animation::{MaybeTerminatingAnimation, Animation};
 
 pub mod bounce;
 pub mod lines;
@@ -11,15 +11,19 @@ pub fn current_config() -> impl MaybeTerminatingAnimation {
         .with_fps(60.0)
         .with_duration(Duration::from_secs(60))
         .repeat(30)
+        // .with_duration(Duration::from_secs(5))
+        // .repeat(2)
         .chain(
             lines::SpinningLines::default()
                 .with_fps(60.0)
                 .with_duration(Duration::from_secs(60 * 30)),
+                // .with_duration(Duration::from_secs(10)),
         )
         .chain(
             sine_thing::SineThing::default()
                 .with_fps(60.0)
                 .with_duration(Duration::from_secs(60 * 30)),
+                // .with_duration(Duration::from_secs(10)),
         );
 
     println!("{:#?}", anim);

@@ -3,7 +3,7 @@ use sdfu::{
     SDF,
 };
 
-use crate::render::Frame;
+use crate::frame::Frame;
 
 pub fn render_sdf<V, S>(sdf: S, frame: &mut Frame)
 where

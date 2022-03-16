@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 
 use crate::animations::current_config;
-use crate::render::Driver;
+use crate::backends::null::NullBackend;
+use crate::render::DynDriver;
 
 #[derive(Component)]
 struct Coordinate {
@@ -12,7 +13,7 @@ struct Coordinate {
 }
 
 struct State {
-    driver: Driver,
+    driver: DynDriver,
 }
 
 fn setup(
@@ -22,7 +23,7 @@ fn setup(
 ) {
     let animation = current_config();
 
-    let driver = Driver::new(animation);
+    let driver = DynDriver::new(animation, NullBackend);
 
     let mesh = meshes.add(Mesh::from(shape::Cube { size: 1.0 }));
     let light_mesh = meshes.add(Mesh::from(shape::Cube { size: 0.5 }));
