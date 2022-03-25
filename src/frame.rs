@@ -18,6 +18,10 @@ impl Frame {
         self.0[y][x][z] = val;
     }
 
+    pub fn zero(&mut self) {
+        *self = Frame::new();
+    }
+
     pub fn layer_mut(&mut self, n: usize) -> &mut [[u8; 8]; 8] {
         &mut self.0[n]
     }

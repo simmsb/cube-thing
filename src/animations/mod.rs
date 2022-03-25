@@ -5,6 +5,8 @@ use crate::animation::{MaybeTerminatingAnimation, Animation};
 pub mod bounce;
 pub mod lines;
 pub mod sine_thing;
+pub mod waves;
+mod utils;
 
 pub fn current_config() -> impl MaybeTerminatingAnimation {
     let anim = bounce::Bounce::default()
@@ -25,6 +27,9 @@ pub fn current_config() -> impl MaybeTerminatingAnimation {
                 .with_duration(Duration::from_secs(60 * 30)),
                 // .with_duration(Duration::from_secs(10)),
         );
+
+    let anim = waves::Waves::default()
+        .with_fps(60.0);
 
     println!("{:#?}", anim);
 

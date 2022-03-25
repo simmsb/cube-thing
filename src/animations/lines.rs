@@ -1,7 +1,7 @@
 use crate::{
     animation::Animation,
     frame::Frame,
-    sdf::{render_sdf, MultiUnion},
+    sdf::{render_sdf, MultiUnion}, animations::utils::random_rotation,
 };
 use nalgebra::{vector, Rotation3, Vector3};
 use rand::Rng;
@@ -28,24 +28,20 @@ impl Animation for SpinningLines {
 
         let to_add = if self.lines.len() < MIN_LINES {
             MIN_LINES - self.lines.len()
-        } else if self.lines.len() < 10 && rng.gen_range(0..500u16) < 1 {
+        } else if self.lines.len() < 10 && rng.gen_bool(0.002) {
             1
         } else {
             0
         };
 
-        let to_remove = if self.lines.len() > 3 && rng.gen_range(0..500u16) < 1 {
+        let to_remove = if self.lines.len() > 3 && rng.gen_bool(0.002) {
             1
         } else {
             0
         };
 
         for _ in 0..to_add {
-            let rotation = Rotation3::from_euler_angles(
-                rng.gen_range(0.0..std::f32::consts::TAU),
-                rng.gen_range(0.0..std::f32::consts::TAU),
-                rng.gen_range(0.0..std::f32::consts::TAU),
-            );
+            let rotation = random_rotation();
 
             let translation = vector![
                 rng.gen_range(-2.0..2.0),

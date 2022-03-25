@@ -8,6 +8,8 @@ use rand::Rng;
 use rapier3d::prelude::*;
 use sdfu::SDF;
 
+use super::utils::random_rotation;
+
 pub struct Bounce {
     ip: IntegrationParameters,
     pp: PhysicsPipeline,
@@ -68,11 +70,8 @@ impl Default for Bounce {
 
         for _ in 0..rng.gen_range(1..4u8) {
             let initial_vel = vector![0.0, 7.0, 0.0];
-            let rotation = rapier3d::na::Rotation3::from_euler_angles(
-                rng.gen_range(0.0..std::f32::consts::TAU),
-                rng.gen_range(0.0..std::f32::consts::TAU),
-                rng.gen_range(0.0..std::f32::consts::TAU),
-            );
+
+            let rotation = random_rotation();
 
             let initial_position = vector![
                 rng.gen_range(1.0..7.0),

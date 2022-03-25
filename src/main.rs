@@ -1,5 +1,7 @@
 #![allow(incomplete_features)]
 #![feature(specialization)]
+#![feature(vec_retain_mut)]
+#![feature(mixed_integer_ops)]
 
 mod animation;
 mod animations;
