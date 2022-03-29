@@ -8,17 +8,27 @@ use nalgebra::{vector, SMatrix, Vector3};
 use rand::Rng;
 use sdfu::SDF;
 
+#[cfg_attr(feature = "visual", derive(bevy_inspector_egui::Inspectable))]
 pub struct Waves {
     c2: f32,
     h2: f32,
     drop_speed: f32,
     delta_t: f32,
     drop_volume: f32,
+    drain_rate: f32,
+    #[cfg_attr(feature = "visual", inspectable(min = 0.0, max = 100.0))]
     max_gradient: f32,
+    #[cfg_attr(feature = "visual", inspectable(read_only))]
+    current_volume: f32,
+    #[cfg_attr(feature = "visual", inspectable(ignore))]
     u: SMatrix<f32, 8, 8>,
+    #[cfg_attr(feature = "visual", inspectable(ignore))]
     u_new: SMatrix<f32, 8, 8>,
+    #[cfg_attr(feature = "visual", inspectable(ignore))]
     v: SMatrix<f32, 8, 8>,
+    #[cfg_attr(feature = "visual", inspectable(ignore))]
     drops: Vec<(u8, u8, f32)>,
+    #[cfg_attr(feature = "visual", inspectable(ignore))]
     sdf_cache: Vec<sdfu::mods::Translate<Vector3<f32>, sdfu::Sphere<f32>>>,
 }
 
@@ -28,9 +38,11 @@ impl Default for Waves {
             c2: 0.3,
             h2: 3.0,
             drop_speed: 0.1,
-            delta_t: 0.5,
-            drop_volume: 0.3,
-            max_gradient: 0.8,
+            delta_t: 0.2,
+            drop_volume: 10.0,
+            drain_rate: 0.1,
+            max_gradient: 20.0,
+            current_volume: 0.0,
             u: Default::default(),
             u_new: Default::default(),
             v: Default::default(),
@@ -76,11 +88,13 @@ impl Animation for Waves {
 
             self.v[(x, z)] += f * self.delta_t;
 
-            self.u_new[(x, z)] = self.u[(x, z)] + self.v[(x, z)] * self.delta_t;
+            self.u_new[(x, z)] = (self.u[(x, z)] + self.v[(x, z)] * self.delta_t).max(0.0);
             self.v[(x, z)] *= 0.97;
         }
 
         self.u.copy_from(&self.u_new);
+        self.u.add_scalar_mut(-self.drain_rate * self.delta_t);
+        self.current_volume = self.u.sum();
 
         if self.drops.len() < 3 && rng.gen_bool(0.3) {
             self.drops
@@ -120,17 +134,24 @@ impl Animation for Waves {
             let mut height = self.u[(x, z)];
             let mut y = 0;
 
-            while height > 1.0 {
-                frame.set(x, y, z, 255);
+            let led_volume = 6.0;
+
+            while height > led_volume {
+                frame.set(x, y, z, 127);
                 y += 1;
-                height -= 1.0;
+                height -= led_volume;
 
                 if y >= 8 {
                     continue 'outer;
                 }
             }
 
-            frame.set(x, y, z, (height * 255.0) as u8);
+            frame.set(
+                x,
+                y,
+                z,
+                ((height.max(0.0) / led_volume) * 255.0) as u8,
+            );
         }
     }
 

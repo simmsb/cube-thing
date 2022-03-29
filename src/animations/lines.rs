@@ -14,6 +14,15 @@ pub struct SpinningLines {
     line_cache: Vec<sdfu::Line<f32, Vector3<f32>>>,
 }
 
+#[cfg(feature = "visual")]
+impl bevy_inspector_egui::Inspectable for SpinningLines {
+    type Attributes = <() as bevy_inspector_egui::Inspectable>::Attributes;
+
+    fn ui(&mut self, ui: &mut bevy_inspector_egui::egui::Ui, options: Self::Attributes, context: &mut bevy_inspector_egui::Context) -> bool {
+        <() as bevy_inspector_egui::Inspectable>::ui(&mut (), ui, options, context)
+    }
+}
+
 impl std::fmt::Debug for SpinningLines {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SpinningLines").finish()

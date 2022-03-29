@@ -1,3 +1,4 @@
+use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 
 use crate::frame::Frame;
@@ -83,9 +84,12 @@ macro_rules! impl_maybe_term {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "visual", derive(bevy_inspector_egui::Inspectable))]
 pub struct FixedFPSAnimation<T> {
     inner: T,
+    #[cfg_attr(feature = "visual", inspectable(ignore))]
     interval: Duration,
+    #[cfg_attr(feature = "visual", inspectable(ignore))]
     last_frame: Instant,
 }
 
@@ -112,9 +116,12 @@ impl<T: TerminatingAnimation> TerminatingAnimation for FixedFPSAnimation<T> {
 impl_maybe_term!(FixedFPSAnimation<T: TerminatingAnimation>);
 
 #[derive(Debug)]
+#[cfg_attr(feature = "visual", derive(bevy_inspector_egui::Inspectable))]
 pub struct TimeLimitedAnimation<T> {
     inner: T,
+    #[cfg_attr(feature = "visual", inspectable(ignore))]
     duration: Duration,
+    #[cfg_attr(feature = "visual", inspectable(ignore))]
     started: Instant,
 }
 
@@ -141,6 +148,7 @@ impl<T: MaybeTerminatingAnimation> TerminatingAnimation for TimeLimitedAnimation
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "visual", derive(bevy_inspector_egui::Inspectable))]
 pub struct ChainedAnimation<T, U> {
     a: T,
     b: U,
@@ -186,6 +194,7 @@ impl<T: TerminatingAnimation, U: TerminatingAnimation> TerminatingAnimation
 impl_maybe_term!(ChainedAnimation<T: TerminatingAnimation, U: TerminatingAnimation>);
 
 #[derive(Debug)]
+#[cfg_attr(feature = "visual", derive(bevy_inspector_egui::Inspectable))]
 pub struct RepeatedAnimation<T> {
     inner: T,
     loops: usize,
@@ -220,3 +229,35 @@ impl<T: TerminatingAnimation> TerminatingAnimation for RepeatedAnimation<T> {
 }
 
 impl_maybe_term!(RepeatedAnimation<T: TerminatingAnimation>);
+
+impl<T: Animation> Animation for RwLock<T> {
+    fn next_frame(&mut self, frame: &mut Frame) {
+        self.write().unwrap().next_frame(frame);
+    }
+
+    fn reset(&mut self) {
+        self.write().unwrap().reset();
+    }
+}
+
+impl<T: TerminatingAnimation> TerminatingAnimation for RwLock<T> {
+    fn ended(&self) -> bool {
+        self.read().unwrap().ended()
+    }
+}
+
+impl<T: Animation> Animation for Arc<RwLock<T>> {
+    fn next_frame(&mut self, frame: &mut Frame) {
+        self.write().unwrap().next_frame(frame);
+    }
+
+    fn reset(&mut self) {
+        self.write().unwrap().reset();
+    }
+}
+
+impl<T: TerminatingAnimation> TerminatingAnimation for Arc<RwLock<T>> {
+    fn ended(&self) -> bool {
+        self.read().unwrap().ended()
+    }
+}

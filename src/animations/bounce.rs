@@ -25,6 +25,15 @@ pub struct Bounce {
     sdf_cache: Vec<sdfu::mods::Translate<Vector3<f32>, sdfu::Sphere<f32>>>,
 }
 
+#[cfg(feature = "visual")]
+impl bevy_inspector_egui::Inspectable for Bounce {
+    type Attributes = <() as bevy_inspector_egui::Inspectable>::Attributes;
+
+    fn ui(&mut self, ui: &mut bevy_inspector_egui::egui::Ui, options: Self::Attributes, context: &mut bevy_inspector_egui::Context) -> bool {
+        <() as bevy_inspector_egui::Inspectable>::ui(&mut (), ui, options, context)
+    }
+}
+
 impl std::fmt::Debug for Bounce {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Bounce").finish()

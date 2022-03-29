@@ -1,6 +1,7 @@
 use crate::{animation::Animation, frame::Frame};
 
 #[derive(Default)]
+#[cfg_attr(feature = "visual", derive(bevy_inspector_egui::Inspectable))]
 pub struct SineThing {
     step: f32,
 }
@@ -14,7 +15,9 @@ impl std::fmt::Debug for SineThing {
 impl Animation for SineThing {
     fn next_frame(&mut self, frame: &mut Frame) {
         for (x, y, z, pix) in frame.pixels_mut() {
-            let dist = ((4.0 - x as f32).powi(2) + (4.0 - y as f32).powi(2) + (4.0 - z as f32).powi(2)).sqrt();
+            let dist =
+                ((4.0 - x as f32).powi(2) + (4.0 - y as f32).powi(2) + (4.0 - z as f32).powi(2))
+                    .sqrt();
             *pix = ((((self.step + dist) * 30.0).to_radians().sin() + 1.0) * 127.0) as u8;
         }
 

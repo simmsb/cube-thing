@@ -2,6 +2,7 @@
 #![feature(specialization)]
 #![feature(vec_retain_mut)]
 #![feature(mixed_integer_ops)]
+#![feature(type_alias_impl_trait)]
 
 mod animation;
 mod animations;
