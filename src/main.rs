@@ -3,6 +3,7 @@
 #![feature(vec_retain_mut)]
 #![feature(mixed_integer_ops)]
 #![feature(type_alias_impl_trait)]
+#![cfg_attr(feature = "visual", feature(adt_const_params))]
 
 mod animation;
 mod animations;

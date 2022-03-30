@@ -1,6 +1,7 @@
 use std::sync::{Arc, RwLock};
 
 use bevy::prelude::*;
+use bevy_inspector_egui::plugin::InspectorWindows;
 use bevy_inspector_egui::{Inspectable, InspectorPlugin};
 
 use crate::animations::current_config;
@@ -19,16 +20,20 @@ struct State {
     driver: DynDriver,
 }
 
-struct Lol<T>(Arc<RwLock<T>>);
+struct Lol<T, const NAME: &'static str>(Arc<RwLock<T>>);
 
-impl<T: Inspectable + Send + Sync + 'static> Plugin for Lol<T> {
+impl<T: Inspectable + Send + Sync + 'static, const NAME: &'static str> Plugin for Lol<T, NAME> {
     fn build(&self, app: &mut App) {
-        app.insert_resource(Lol(self.0.clone()))
-            .add_plugin(InspectorPlugin::<Lol<T>>::new_insert_manually());
+        app.insert_resource(Lol::<T, NAME>(self.0.clone()))
+            .add_plugin(InspectorPlugin::<Lol<T, NAME>>::new_insert_manually());
+
+        app.add_startup_system(|mut windows: ResMut<InspectorWindows>| {
+            windows.window_data_mut::<Lol<T, NAME>>().name = NAME.to_owned();
+        });
     }
 }
 
-impl<T: Inspectable> Inspectable for Lol<T> {
+impl<T: Inspectable, const NAME: &'static str> Inspectable for Lol<T, NAME> {
     type Attributes = T::Attributes;
 
     fn ui_raw(&mut self, ui: &mut bevy_inspector_egui::egui::Ui, options: Self::Attributes) {
@@ -133,7 +138,7 @@ pub fn main() {
         .insert_resource(State { driver })
         .add_plugins(DefaultPlugins)
         .add_plugin(bevy_flycam::PlayerPlugin)
-        .add_plugin(Lol(animation.clone()))
+        .add_plugin(Lol::<_, "Animation">(animation.clone()))
         .add_startup_system(setup)
         .add_system(update_driver_system)
         .run();
