@@ -4,11 +4,12 @@ use crate::{
     sdf::{render_sdf, MultiUnion},
 };
 use nalgebra::Vector3;
+use palette::LinSrgba;
 use rand::Rng;
 use rapier3d::prelude::*;
 use sdfu::SDF;
 
-use super::utils::random_rotation;
+use super::utils::{random_colour, random_rotation};
 
 pub struct Bounce {
     ip: IntegrationParameters,
@@ -21,7 +22,7 @@ pub struct Bounce {
     ijs: ImpulseJointSet,
     mbjs: MultibodyJointSet,
     ccd: CCDSolver,
-    bh: Vec<RigidBodyHandle>,
+    bh: Vec<Ball>,
     sdf_cache: Vec<sdfu::mods::Translate<Vector3<f32>, sdfu::Sphere<f32>>>,
 }
 
@@ -29,7 +30,12 @@ pub struct Bounce {
 impl bevy_inspector_egui::Inspectable for Bounce {
     type Attributes = <() as bevy_inspector_egui::Inspectable>::Attributes;
 
-    fn ui(&mut self, ui: &mut bevy_inspector_egui::egui::Ui, options: Self::Attributes, context: &mut bevy_inspector_egui::Context) -> bool {
+    fn ui(
+        &mut self,
+        ui: &mut bevy_inspector_egui::egui::Ui,
+        options: Self::Attributes,
+        context: &mut bevy_inspector_egui::Context,
+    ) -> bool {
         <() as bevy_inspector_egui::Inspectable>::ui(&mut (), ui, options, context)
     }
 }
@@ -37,6 +43,20 @@ impl bevy_inspector_egui::Inspectable for Bounce {
 impl std::fmt::Debug for Bounce {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Bounce").finish()
+    }
+}
+
+struct Ball {
+    handle: RigidBodyHandle,
+    colour: LinSrgba,
+}
+
+impl Ball {
+    fn new(handle: RigidBodyHandle) -> Self {
+        Self {
+            handle,
+            colour: random_colour(1.0, 1.0, 1.0),
+        }
     }
 }
 
@@ -88,7 +108,7 @@ impl Default for Bounce {
                 rng.gen_range(1.0..7.0)
             ];
 
-            let rigid_body = RigidBodyBuilder::new_dynamic()
+            let rigid_body = RigidBodyBuilder::dynamic()
                 .translation(initial_position)
                 .linvel(rotation * initial_vel)
                 // .linvel(vector![4.0, 2.0, 3.0])
@@ -102,7 +122,7 @@ impl Default for Bounce {
                 .build();
             let ball_body_handle = rigid_body_set.insert(rigid_body);
             collider_set.insert_with_parent(collider, ball_body_handle, &mut rigid_body_set);
-            ball_handles.push(ball_body_handle);
+            ball_handles.push(Ball::new(ball_body_handle));
         }
 
         let integration_parameters = IntegrationParameters::default();
@@ -150,17 +170,17 @@ impl Animation for Bounce {
 
         self.sdf_cache.clear();
 
-        for &ball in &self.bh {
-            let ball_pos = *self.rbs[ball].translation();
+        for ball in &self.bh {
+            let ball_pos = *self.rbs[ball.handle].translation();
 
-            let linvel = *self.rbs[ball].linvel();
+            let linvel = *self.rbs[ball.handle].linvel();
 
             if linvel.magnitude() > 14.0 {
                 let new_linvel = linvel.normalize().scale(14.0);
-                self.rbs[ball].set_linvel(new_linvel, false);
+                self.rbs[ball.handle].set_linvel(new_linvel, false);
             }
 
-            let sdf = sdfu::Sphere::new(0.3).translate(ball_pos);
+            let sdf = sdfu::Sphere::new(0.5, ball.colour).translate(ball_pos);
 
             self.sdf_cache.push(sdf);
         }

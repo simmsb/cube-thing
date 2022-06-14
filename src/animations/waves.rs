@@ -5,6 +5,7 @@ use crate::{
 };
 use itertools::Itertools;
 use nalgebra::{vector, SMatrix, Vector3};
+use palette::{LinSrgba, Mix};
 use rand::Rng;
 use sdfu::SDF;
 
@@ -117,7 +118,8 @@ impl Animation for Waves {
         self.sdf_cache.clear();
 
         for &(x, z, y) in &self.drops {
-            let sdf = sdfu::Sphere::new(0.1).translate(vector![x as f32, y, z as f32]);
+            let sdf = sdfu::Sphere::new(0.1, LinSrgba::new(0.0, 0.2, 0.9, 1.0))
+                .translate(vector![x as f32, y, z as f32]);
 
             self.sdf_cache.push(sdf);
         }
@@ -137,7 +139,7 @@ impl Animation for Waves {
             let led_volume = 6.0;
 
             while height > led_volume {
-                frame.set(x, y, z, 127);
+                frame.set(x, y, z, LinSrgba::new(0.0, 0.2, 0.9, 0.8));
                 y += 1;
                 height -= led_volume;
 
@@ -146,12 +148,12 @@ impl Animation for Waves {
                 }
             }
 
-            frame.set(
-                x,
-                y,
-                z,
-                ((height.max(0.0) / led_volume) * 255.0) as u8,
+            let colour = LinSrgba::new(0.0, 0.2, 0.9, 0.8).mix(
+                &LinSrgba::new(1.0, 1.0, 1.0, 0.8),
+                height.max(0.0) / led_volume,
             );
+
+            frame.set(x, y, z, colour);
         }
     }
 

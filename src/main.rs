@@ -26,12 +26,6 @@ fn main() {
     let animation = current_config();
 
     let backend = {
-        #[cfg(feature = "rpi_out")]
-        {
-            use backends::rpi::RpiBackend;
-            RpiBackend::new().unwrap()
-        }
-        #[cfg(not(feature = "rpi_out"))]
         {
             use backends::null::NullBackend;
             NullBackend

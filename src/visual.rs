@@ -3,6 +3,7 @@ use std::sync::{Arc, RwLock};
 use bevy::prelude::*;
 use bevy_inspector_egui::plugin::InspectorWindows;
 use bevy_inspector_egui::{Inspectable, InspectorPlugin};
+use palette::Srgba;
 
 use crate::animations::current_config;
 use crate::backends::null::NullBackend;
@@ -121,11 +122,11 @@ fn update_driver_system(
         let value = state
             .driver
             .frame()
-            .get(coord.x as usize, coord.y as usize, coord.z as usize) as f32
-            / 256.0;
+            .get(coord.x as usize, coord.y as usize, coord.z as usize);
         let mat = materials.get_mut(&coord.mat).unwrap();
-        mat.base_color = Color::rgba(value, value, value, value * 0.5 + 0.5);
-        mat.emissive = Color::rgba(value, value, value, value * 0.5 + 0.5);
+        let colour = Srgba::from_linear(value);
+        mat.base_color = Color::rgba(colour.red, colour.green, colour.blue, colour.alpha);
+        mat.emissive = Color::rgba(colour.red, colour.green, colour.blue, colour.alpha);
     }
 }
 

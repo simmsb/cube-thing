@@ -1,3 +1,5 @@
+use palette::{FromColor, Hsva, RgbHue, Srgba};
+
 use crate::{animation::Animation, frame::Frame};
 
 #[derive(Default)]
@@ -18,7 +20,11 @@ impl Animation for SineThing {
             let dist =
                 ((4.0 - x as f32).powi(2) + (4.0 - y as f32).powi(2) + (4.0 - z as f32).powi(2))
                     .sqrt();
-            *pix = ((((self.step + dist) * 30.0).to_radians().sin() + 1.0) * 127.0) as u8;
+
+            let alpha = (((self.step * 3.0 + dist) * 40.0).to_radians().sin() + 1.0) / 2.0;
+            let hue = RgbHue::from_radians(((self.step + dist) * 30.0).to_radians());
+            let hsv = Hsva::new(hue, 1.0, 1.0, alpha);
+            *pix = Srgba::from_color(hsv).into_linear()
         }
 
         self.step += 0.1;
