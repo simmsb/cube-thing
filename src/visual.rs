@@ -3,7 +3,7 @@ use std::sync::{Arc, RwLock};
 use bevy::prelude::*;
 use bevy_inspector_egui::plugin::InspectorWindows;
 use bevy_inspector_egui::{Inspectable, InspectorPlugin};
-use palette::Srgba;
+use palette::{Blend, LinSrgba, Srgba};
 
 use crate::animations::current_config;
 use crate::backends::null::NullBackend;
@@ -61,32 +61,15 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let mesh = meshes.add(Mesh::from(shape::Cube { size: 1.0 }));
-    let light_mesh = meshes.add(Mesh::from(shape::Cube { size: 0.5 }));
-
-    let material = materials.add(StandardMaterial {
-        base_color: Color::rgba(0.0, 0.8, 0.9, 0.3),
-        alpha_mode: AlphaMode::Blend,
-        ..Default::default()
-    });
+    let mesh = meshes.add(Mesh::from(shape::Icosphere {
+        radius: 0.6,
+        subdivisions: 2,
+    }));
 
     for (x, y, z, _pix) in state.driver.frame().pixels() {
-        commands.spawn_bundle(PbrBundle {
-            mesh: mesh.clone(),
-            material: material.clone(),
-            transform: Transform::from_xyz(
-                (x as f32 - 4.0) * 4.0,
-                (y as f32 - 4.0) * 4.0,
-                (z as f32 - 4.0) * 4.0,
-            ),
-            ..Default::default()
-        });
-
-        let light_mat = materials.add(StandardMaterial {
-            base_color: Color::ANTIQUE_WHITE,
-            emissive: Color::ANTIQUE_WHITE,
+        let material = materials.add(StandardMaterial {
+            base_color: Color::rgba(0.0, 0.8, 0.9, 0.3),
             alpha_mode: AlphaMode::Blend,
-            metallic: 0.5,
             ..Default::default()
         });
 
@@ -96,11 +79,11 @@ fn setup(
                 x,
                 y,
                 z,
-                mat: light_mat.clone(),
+                mat: material.clone(),
             })
             .insert_bundle(PbrBundle {
-                mesh: light_mesh.clone(),
-                material: light_mat,
+                mesh: mesh.clone(),
+                material: material.clone(),
                 transform: Transform::from_xyz(
                     (x as f32 - 4.0) * 4.0,
                     (y as f32 - 4.0) * 4.0,
@@ -123,9 +106,16 @@ fn update_driver_system(
             .driver
             .frame()
             .get(coord.x as usize, coord.y as usize, coord.z as usize);
+        let value = LinSrgba::new(0.3, 0.3, 0.3, 0.4).overlay(value);
         let mat = materials.get_mut(&coord.mat).unwrap();
         let colour = Srgba::from_linear(value);
-        mat.base_color = Color::rgba(colour.red, colour.green, colour.blue, colour.alpha);
+        mat.base_color = Color::rgba(
+            colour.red,
+            colour.green,
+            colour.blue,
+            colour.alpha,
+            // (colour.alpha * 0.5) + 0.5,
+        );
         mat.emissive = Color::rgba(colour.red, colour.green, colour.blue, colour.alpha);
     }
 }

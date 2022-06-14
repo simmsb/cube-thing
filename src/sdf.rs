@@ -21,7 +21,7 @@ where
         let mut colour = sdf.colour(pos);
 
         if dist > 0.2 {
-            let alpha = 1.0 / (dist * 2.0).powi(3);
+            let alpha = 1.0 / (dist).powi(5);
             colour.alpha *= alpha;
         }
 
