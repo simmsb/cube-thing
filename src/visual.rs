@@ -1,5 +1,6 @@
 use std::sync::{Arc, RwLock};
 
+use bevy::core_pipeline::bloom::BloomSettings;
 use bevy::prelude::*;
 use bevy_inspector_egui::plugin::InspectorWindows;
 use bevy_inspector_egui::{Inspectable, InspectorPlugin};
@@ -17,10 +18,12 @@ struct Coordinate {
     mat: Handle<StandardMaterial>,
 }
 
+#[derive(Resource)]
 struct State {
     driver: DynDriver,
 }
 
+#[derive(Resource)]
 struct Lol<T, const NAME: &'static str>(Arc<RwLock<T>>);
 
 impl<T: Inspectable + Send + Sync + 'static, const NAME: &'static str> Plugin for Lol<T, NAME> {
@@ -63,25 +66,39 @@ fn setup(
 ) {
     let mesh = meshes.add(Mesh::from(shape::Icosphere {
         radius: 0.6,
-        subdivisions: 2,
+        subdivisions: 4,
     }));
+
+    commands.spawn((
+        bevy_flycam::FlyCam,
+        Camera3dBundle {
+            camera: Camera {
+                hdr: true,
+                ..Default::default()
+            },
+            transform: Transform::from_xyz(-2.0, 5.0, 5.0).looking_at(Vec3::ZERO, Vec3::Y),
+            ..Default::default()
+        },
+        BloomSettings {
+            ..Default::default()
+        },
+    ));
 
     for (x, y, z, _pix) in state.driver.frame().pixels() {
         let material = materials.add(StandardMaterial {
-            base_color: Color::rgba(0.0, 0.8, 0.9, 0.3),
+            // base_color: Color::rgba(0.0, 0.8, 0.9, 0.3),
             alpha_mode: AlphaMode::Blend,
             ..Default::default()
         });
 
-        commands
-            .spawn()
-            .insert(Coordinate {
+        commands.spawn((
+            Coordinate {
                 x,
                 y,
                 z,
                 mat: material.clone(),
-            })
-            .insert_bundle(PbrBundle {
+            },
+            PbrBundle {
                 mesh: mesh.clone(),
                 material: material.clone(),
                 transform: Transform::from_xyz(
@@ -90,7 +107,8 @@ fn setup(
                     (z as f32 - 4.0) * 4.0,
                 ),
                 ..Default::default()
-            });
+            },
+        ));
     }
 }
 
@@ -116,7 +134,8 @@ fn update_driver_system(
             colour.alpha,
             // (colour.alpha * 0.5) + 0.5,
         );
-        mat.emissive = Color::rgba(colour.red, colour.green, colour.blue, colour.alpha);
+        let s = colour.alpha * 5.0;
+        mat.emissive = Color::rgb(colour.red * s, colour.green * s, colour.blue * s);
     }
 }
 
@@ -128,7 +147,7 @@ pub fn main() {
     App::new()
         .insert_resource(State { driver })
         .add_plugins(DefaultPlugins)
-        .add_plugin(bevy_flycam::PlayerPlugin)
+        .add_plugin(bevy_flycam::NoCameraPlayerPlugin)
         .add_plugin(Lol::<_, "Animation">(animation.clone()))
         .add_startup_system(setup)
         .add_system(update_driver_system)
