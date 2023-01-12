@@ -14,6 +14,7 @@ pub struct RpiBackend {
     rclk: OutputPin,
     srclk: OutputPin,
     ticker: PWMTicker,
+    pwm_err: [[[i8; 8]; 8]; 8],
 }
 
 impl RpiBackend {
@@ -29,6 +30,7 @@ impl RpiBackend {
             rclk,
             srclk,
             ticker,
+            pwm_err: [[[0; 8]; 8]; 8],
         })
     }
 
@@ -48,15 +50,16 @@ impl RpiBackend {
 
 impl Backend for RpiBackend {
     fn display_frame(&mut self, frame: &Frame) {
-        for (idx, layer) in frame.layers().iter().rev().enumerate() {
+        for (layer_idx, layer) in frame.layers().iter().rev().enumerate() {
             self.rclk.set_low();
 
-            let height = 1u8 << idx;
+            let height = 1u8 << layer_idx;
             self.out_byte(height);
 
-            for row in layer {
-                for brightness in row {
-                    let bit = self.ticker.compute_pwm(*brightness);
+            for (row_idx, row) in layer.iter().enumerate() {
+                for (led_idx, brightness) in row.iter().enumerate() {
+                    let err = &mut self.pwm_err[layer_idx][row_idx][led_idx];
+                    let bit = self.ticker.compute_pwm(*brightness, err);
                     self.push_pin(bit);
                 }
             }
@@ -70,52 +73,21 @@ impl Backend for RpiBackend {
 
 struct PWMTicker {
     frame: u8,
+    noise: i32,
 }
 
 impl PWMTicker {
     pub fn new() -> Self {
-        Self { frame: 0 }
+        Self { frame: 0, noise: 1 }
     }
 
-    pub fn compute_pwm(&self, brightness: u8) -> bool {
-        const BRIGHTNESS_PATS: [u32; 32] = [
-            0b00000000000000000000000000000000,
-            0b00000000000000000000000000000001,
-            0b00000000000000100000000000000001,
-            0b00000001000000000000010000000001,
-            0b00000010000000010000000100000001,
-            0b00001000000010000000100000100001,
-            0b00100000100000100000100000100001,
-            0b00100001000010000010000100010001,
-            0b10000100010000100010001000100001,
-            0b10001000100010001000100010001001,
-            0b10010001000100100010001001001001,
-            0b10010010010010010010010010010010,
-            0b10010100100101001001001010010010, // 12
-            0b10010100101001010010100101001010,
-            0b10010100101001010010100101001011,
-            0b10010101001010100101010010101001,
-            0b10010101001010101101010010101001,
-            0b10110101001010101101010010101001,
-            0b10110101001010101101010110101001,
-            0b10110101011010101101010110101001,
-            0b10110101011010101101010110101101,
-            0b10110101011011101101010110101101,
-            0b10110111011011101101010110101101,
-            0b10110111011011101101110110101101,
-            0b10110111011011101101110111101101,
-            0b10110111111011101101110111101101,
-            0b10110111111011101101110111111101,
-            0b11110111111011101101110111111101,
-            0b11110111111011101111110111111101,
-            0b11110111111111101111111111111101,
-            0b11111111111111101111111111111111,
-            0b11111111111111111111111111111111,
-        ];
+    pub fn compute_pwm(&mut self, brightness: u8, err: &mut i8) -> bool {
+        self.noise = (self.noise / 2) ^ -(self.noise % 2) & 0x428e;
+        let c = brightness as i32 + *err as i32 + (((self.noise & 0x1) << 1) - 1);
+        let output = if c > 15 { 31 } else { 0 };
+        *err = (c - output) as i8;
 
-        let pattern = BRIGHTNESS_PATS[(brightness / 8) as usize];
-
-        pattern.view_bits::<Lsb0>()[self.frame as usize]
+        output == 0
     }
 
     pub fn next_frame(&mut self) {

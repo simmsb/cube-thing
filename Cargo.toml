@@ -19,6 +19,6 @@ rppal = "0.13.1"
 sdfu = { features = ["nalgebra"], git = "https://github.com/simmsb/sdfu.git" }
 
 [features]
-default = ["visual"]
+default = ["rpi_out"]
 visual = ["bevy", "bevy_flycam", "bevy-inspector-egui"]
 rpi_out = []
