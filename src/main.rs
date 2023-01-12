@@ -1,6 +1,9 @@
 #![allow(incomplete_features)]
 #![feature(specialization)]
 #![feature(type_alias_impl_trait)]
+#![feature(const_fn_floating_point_arithmetic)]
+#![feature(const_float_bits_conv)]
+#![feature(adt_const_params)]
 #![cfg_attr(feature = "visual", feature(adt_const_params))]
 
 mod animation;
@@ -9,6 +12,7 @@ mod frame;
 mod render;
 mod sdf;
 mod backends;
+mod dither;
 
 #[cfg(feature = "visual")]
 mod visual;

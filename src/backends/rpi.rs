@@ -1,6 +1,7 @@
 use bitvec::{order::Lsb0, view::BitView};
 use rppal::gpio::{self, Gpio, Level, OutputPin};
 
+use crate::dither::gamma_curve;
 use crate::frame::Frame;
 
 use super::backend::Backend;
@@ -46,10 +47,8 @@ impl RpiBackend {
             .write(if bit { Level::High } else { Level::Low });
         self.srclk.set_high();
     }
-}
 
-impl Backend for RpiBackend {
-    fn display_frame(&mut self, frame: &Frame) {
+    fn display_inner(&mut self, frame: &Frame) {
         for (layer_idx, layer) in frame.layers().iter().rev().enumerate() {
             self.rclk.set_low();
 
@@ -59,39 +58,47 @@ impl Backend for RpiBackend {
             for (row_idx, row) in layer.iter().enumerate() {
                 for (led_idx, brightness) in row.iter().enumerate() {
                     let err = &mut self.pwm_err[layer_idx][row_idx][led_idx];
-                    let bit = self.ticker.compute_pwm(*brightness, err);
+                    let bit = self.ticker.compute_pwm(GAMMA[*brightness as usize], err);
                     self.push_pin(bit);
                 }
             }
 
             self.rclk.set_high();
         }
+    }
+}
 
-        self.ticker.next_frame();
+static GAMMA: [u8; 256] = gamma_curve(2.8);
+
+impl Backend for RpiBackend {
+    fn display_frame(&mut self, frame: &Frame) {
+        for _ in 0..8 {
+            self.display_inner(frame);
+        }
     }
 }
 
 struct PWMTicker {
-    frame: u8,
-    noise: i32,
+    noise: i16,
 }
 
 impl PWMTicker {
     pub fn new() -> Self {
-        Self { frame: 0, noise: 1 }
+        Self { noise: 1 }
     }
 
     pub fn compute_pwm(&mut self, brightness: u8, err: &mut i8) -> bool {
         self.noise = (self.noise / 2) ^ -(self.noise % 2) & 0x428e;
-        let c = brightness as i32 + *err as i32 + (((self.noise & 0x1) << 1) - 1);
-        let output = if c > 15 { 31 } else { 0 };
+        let c = brightness as i16 + *err as i16 + (((self.noise & 0x1) << 1) - 1);
+        let output = if c > 127 { 255 } else { 0 };
         *err = (c - output) as i8;
 
-        output == 0
+        output != 0
     }
 
-    pub fn next_frame(&mut self) {
-        self.frame += 1;
-        self.frame %= 32;
-    }
+    // fn test(&mut self, brightness: u8, err: &mut i8) -> String {
+    //     (0..100).map(move |_| self.compute_pwm(brightness, err))
+    //         .map(|b| if b { '1' } else { '0' })
+    //         .collect()
+    // }
 }
